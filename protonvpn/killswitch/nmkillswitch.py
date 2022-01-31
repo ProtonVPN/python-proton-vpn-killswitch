@@ -77,6 +77,14 @@ class NMKillSwitch:
 
         }[action](server_ip)
 
+    def is_active(self)-> bool:
+        """ Return the status of killswitch : enabled or disabled.
+        """
+        if self._interface_state_tracker[self._ks_conn_name][KillSwitchInterfaceTrackerEnum.EXISTS]:
+           if self._interface_state_tracker[self._ks_conn_name][KillSwitchInterfaceTrackerEnum.IS_RUNNING]:
+               return True
+        return False
+
     def enable(self, permanent=False) -> None:
         """ Enable killswitch : if permanent, need to disable/enable it again if VPN is down.
         """
