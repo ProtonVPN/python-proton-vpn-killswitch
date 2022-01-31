@@ -56,67 +56,65 @@ class NMKillSwitch:
             }
         }
 
-        self.get_status_connectivity_check()
+        self._get_status_connectivity_check()
 
-    def manage(self, action, server_ip=None):
+    def _manage(self, action, server_ip=None):
         """Manage killswitch.
 
         Args:
             action (string|int): either pre_connection or post_connection
-            is_menu (bool): if the action comes from configurations menu,
-                if so, then action is int
             server_ip (string): server ip to be connected to
         """
 
         self._ensure_connectivity_check_is_disabled()
-
-        self.update_connection_status()
+        self._update_connection_status()
 
         actions_dict = {
-            KillSwitchActionEnum.PRE_CONNECTION:
-            self.setup_pre_connection_ks,
-            KillSwitchActionEnum.POST_CONNECTION:
-            self.setup_post_connection_ks,
-            KillSwitchActionEnum.SOFT: self.setup_soft_connection,
-            KillSwitchActionEnum.DISABLE: self.disable_killswitch,
+            KillSwitchActionEnum.PRE_CONNECTION: self._setup_pre_connection_ks,
+            KillSwitchActionEnum.POST_CONNECTION: self._setup_post_connection_ks,
+            KillSwitchActionEnum.SOFT: self._setup_soft_connection,
+            KillSwitchActionEnum.DISABLE: self._disable_killswitch,
 
         }[action](server_ip)
 
-    def update_from_user_configuration_menu(self, action):
+    def enable(self, permanent=False) -> None:
+        """ Enable killswitch : if permanent, need to disable/enable it again if VPN is down.
+        """
+        if permanent:
+            self._ensure_connectivity_check_is_disabled()
+            self._update_connection_status()
 
-        self._ensure_connectivity_check_is_disabled()
-        self.update_connection_status()
-
-        if action == KillswitchStatusEnum.HARD:
             try:
-                self.delete_connection(self._routed_conn_name)
+                self._delete_connection(self._routed_conn_name)
             except: # noqa
                 pass
 
             if not self._interface_state_tracker[self._ks_conn_name][
                 KillSwitchInterfaceTrackerEnum.EXISTS
             ]:
-                self.create_killswitch_connection()
+                self._create_killswitch_connection()
                 return
             else:
-                self.activate_connection(self._ks_conn_name)
-        elif action in [
-            KillswitchStatusEnum.SOFT, KillswitchStatusEnum.DISABLED
-        ]:
-            self.disable_killswitch()
+                self._activate_connection(self._ks_conn_name)
         else:
-            raise KillswitchError(
-                "Incorrect option for killswitch manager"
-            )
+            self._setup_soft_connection()
 
-    def setup_pre_connection_ks(self, server_ip, pre_attempts=0):
-        """Assure pre-connection Kill Switch is setup correctly.
+    def disable(self) -> None:
+        """ Disable killswitch
+        """
+        self._ensure_connectivity_check_is_disabled()
+        self._update_connection_status()
+        self._disable_killswitch()
+
+    def _setup_pre_connection_ks(self, server_ip, pre_attempts=0) -> None:
+        """Assure Kill Switch is setup correctly before VPN Connection is
+           established.
 
         Args:
             server_ip (list | string): ProtonVPN server IP
             pre_attempts (int): number of setup attempts
         """
-        self.update_connection_status()
+        self._update_connection_status()
 
         if pre_attempts >= 5:
             raise KillswitchError(
@@ -133,8 +131,8 @@ class NMKillSwitch:
                 KillSwitchInterfaceTrackerEnum.EXISTS
             ]
         ):
-            self.create_routed_connection(server_ip)
-            self.deactivate_connection(self._ks_conn_name)
+            self._create_routed_connection(server_ip)
+            self._deactivate_connection(self._ks_conn_name)
             return
         elif (
             not self._interface_state_tracker[self._ks_conn_name][
@@ -155,7 +153,7 @@ class NMKillSwitch:
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ]
         ):
-            self.delete_connection(self._routed_conn_name)
+            self._delete_connection(self._routed_conn_name)
 
         # check if ks exists. Start it if it does
         # if not then create and start it
@@ -164,22 +162,22 @@ class NMKillSwitch:
                 self._ks_conn_name
             ][KillSwitchInterfaceTrackerEnum.EXISTS]
         ):
-            self.activate_connection(self._ks_conn_name)
+            self._activate_connection(self._ks_conn_name)
         else:
-            self.create_killswitch_connection()
+            self._create_killswitch_connection()
 
         pre_attempts += 1
-        self.setup_pre_connection_ks(server_ip, pre_attempts=pre_attempts)
+        self._setup_pre_connection_ks(server_ip, pre_attempts=pre_attempts)
 
-    def setup_post_connection_ks(
+    def _setup_post_connection_ks(
         self, _, post_attempts=0, activating_soft_connection=False
-    ):
-        """Assure post-connection Kill Switch is setup correctly.
+    ) -> None:
+        """Assure Kill Switch is setup correctly after VPN has been connected
 
         Args:
             post_attempts (int): number of setup attempts
         """
-        self.update_connection_status()
+        self._update_connection_status()
 
         if post_attempts >= 5:
             raise KillswitchError(
@@ -196,8 +194,8 @@ class NMKillSwitch:
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ]
         ):
-            self.activate_connection(self._ks_conn_name)
-            self.delete_connection(self._routed_conn_name)
+            self._activate_connection(self._ks_conn_name)
+            self._delete_connection(self._routed_conn_name)
 
             return
         elif (
@@ -210,7 +208,7 @@ class NMKillSwitch:
                 ]
             )
         ):
-            self.activate_connection(self._ks_conn_name)
+            self._activate_connection(self._ks_conn_name)
             return
         elif (
             self._interface_state_tracker[self._ks_conn_name][
@@ -231,29 +229,29 @@ class NMKillSwitch:
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ]
         ):
-            self.deactivate_connection(self._ks_conn_name)
+            self._deactivate_connection(self._ks_conn_name)
 
         # check if routed ks exists, if so then activate it
         # else raise exception
         if (
             self._interface_state_tracker[self._routed_conn_name][KillSwitchInterfaceTrackerEnum.EXISTS] # noqa
         ):
-            self.activate_connection(self._routed_conn_name)
+            self._activate_connection(self._routed_conn_name)
         else:
             raise Exception("Routed connection does not exist")
 
         post_attempts += 1
-        self.setup_post_connection_ks(
+        self._setup_post_connection_ks(
             _, post_attempts=post_attempts,
             activating_soft_connection=activating_soft_connection
         )
 
-    def setup_soft_connection(self, _):
+    def _setup_soft_connection(self) -> None:
         """Setup Kill Switch for --on setting."""
-        self.create_killswitch_connection()
-        self.setup_post_connection_ks(None, activating_soft_connection=True)
+        self._create_killswitch_connection()
+        self._setup_post_connection_ks(None, activating_soft_connection=True)
 
-    def create_killswitch_connection(self):
+    def _create_killswitch_connection(self):
         """Create killswitch connection/interface."""
         subprocess_command = [
             "nmcli", "c", "a", "type", "dummy",
@@ -274,17 +272,17 @@ class NMKillSwitch:
             "ipv4.dns", "0.0.0.0",
             "ipv6.dns", "::1"
         ]
-        self.update_connection_status()
+        self._update_connection_status()
         if not self._interface_state_tracker[self._ks_conn_name][
             KillSwitchInterfaceTrackerEnum.EXISTS
         ]:
-            self.create_connection(
+            self._create_connection(
                 self._ks_conn_name,
                 "Unable to activate {}".format(self._ks_conn_name),
                 subprocess_command, CreateBlockingKillswitchError
             )
 
-    def create_routed_connection(self, server_ip, try_route_addrs=False):
+    def _create_routed_connection(self, server_ip, try_route_addrs=False):
         """Create routed connection/interface.
 
         Args:
@@ -343,21 +341,21 @@ class NMKillSwitch:
         exception_msg = "Unable to activate {}".format(self._routed_conn_name)
 
         try:
-            self.create_connection(
+            self._create_connection(
                 self._routed_conn_name, exception_msg,
                 subprocess_command, CreateRoutedKillswitchError
             )
         except CreateRoutedKillswitchError as e:
             if e.additional_context.returncode == 2 and not try_route_addrs:
-                return self.create_routed_connection(server_ip, True)
+                return self._create_routed_connection(server_ip, True)
             else:
                 raise CreateRoutedKillswitchError(exception_msg)
 
-    def create_connection(
+    def _create_connection(
         self, conn_name, exception_msg,
         subprocess_command, exception
     ):
-        self.update_connection_status()
+        self._update_connection_status()
         if not self._interface_state_tracker[conn_name][
             KillSwitchInterfaceTrackerEnum.EXISTS
         ]:
@@ -367,13 +365,13 @@ class NMKillSwitch:
                 subprocess_command
             )
 
-    def activate_connection(self, conn_name):
+    def _activate_connection(self, conn_name):
         """Activate a connection based on connection name.
 
         Args:
             conn_name (string): connection name (uid)
         """
-        self.update_connection_status()
+        self._update_connection_status()
         conn_dict = self._nm_wrapper.search_for_connection( # noqa
             conn_name,
             return_device_path=True,
@@ -392,7 +390,7 @@ class NMKillSwitch:
             settings_path = str(conn_dict.get("settings_path"))
 
             try:
-                active_conn = self._nm_wrapper.activate_connection(
+                active_conn = self._nm_wrapper._activate_connection(
                     settings_path, device_path
                 )
             except dbus.exceptions.DBusException as e:
@@ -406,13 +404,13 @@ class NMKillSwitch:
                     "Unable to activate {}".format(conn_name)
                 )
 
-    def deactivate_connection(self, conn_name):
+    def _deactivate_connection(self, conn_name):
         """Deactivate a connection based on connection name.
 
         Args:
             conn_name (string): connection name (uid)
         """
-        self.update_connection_status()
+        self._update_connection_status()
         active_conn_dict = self._nm_wrapper.search_for_connection( # noqa
             conn_name, is_active=True,
             return_active_conn_path=True
@@ -432,7 +430,7 @@ class NMKillSwitch:
                     "Unable to deactivate {}".format(conn_name)
                 )
 
-    def delete_connection(self, conn_name):
+    def _delete_connection(self, conn_name):
         """Delete a connection based on connection name.
 
         If it fails to delete the connection, it will attempt to deactivate it.
@@ -443,7 +441,7 @@ class NMKillSwitch:
         subprocess_command = ""\
             "nmcli c delete {}".format(conn_name).split(" ")
 
-        self.update_connection_status()
+        self._update_connection_status()
         if self._interface_state_tracker[conn_name][KillSwitchInterfaceTrackerEnum.EXISTS]: # noqa
             self._run_subprocess(
                 DeleteKillswitchError,
@@ -451,17 +449,17 @@ class NMKillSwitch:
                 subprocess_command
             )
 
-    def deactivate_all_connections(self):
+    def _deactivate_all_connections(self):
         """Deactivate all connections."""
-        self.deactivate_connection(self._ks_conn_name)
-        self.deactivate_connection(self._routed_conn_name)
+        self._deactivate_connection(self._ks_conn_name)
+        self._deactivate_connection(self._routed_conn_name)
 
-    def disable_killswitch(self, _=None):
+    def _disable_killswitch(self, _=None):
         """Disable killswitch by deleting all NM connections related to it."""
-        self.delete_connection(self._ks_conn_name)
-        self.delete_connection(self._routed_conn_name)
+        self._delete_connection(self._ks_conn_name)
+        self._delete_connection(self._routed_conn_name)
 
-    def update_connection_status(self):
+    def _update_connection_status(self):
         """Update connection/interface status."""
         all_conns = self._nm_wrapper.get_all_connections()
         active_conns = self._nm_wrapper.get_all_active_connections()
@@ -518,18 +516,18 @@ class NMKillSwitch:
             )
 
     def _ensure_connectivity_check_is_disabled(self):
-        conn_check = self.connectivity_check()
+        conn_check = self._connectivity_check()
 
         if len(conn_check) > 0:
-            self.disable_connectivity_check(
+            self._disable_connectivity_check(
                 conn_check[0], conn_check[1]
             )
 
-    def connectivity_check(self):
+    def _connectivity_check(self):
         (
             is_conn_check_available,
             is_conn_check_enabled,
-        ) = self.get_status_connectivity_check()
+        ) = self._get_status_connectivity_check()
 
         if not is_conn_check_enabled:
             return tuple()
@@ -541,7 +539,7 @@ class NMKillSwitch:
 
         return is_conn_check_available, is_conn_check_enabled
 
-    def get_status_connectivity_check(self):
+    def _get_status_connectivity_check(self):
         """Check status of NM connectivity check."""
         nm_props = self._nm_wrapper.get_network_manager_properties()
         is_conn_check_available = nm_props["ConnectivityCheckAvailable"]
@@ -549,7 +547,7 @@ class NMKillSwitch:
 
         return is_conn_check_available, is_conn_check_enabled
 
-    def disable_connectivity_check(
+    def _disable_connectivity_check(
         self, is_conn_check_available, is_conn_check_enabled
     ):
         """Disable NetworkManager connectivity check."""
