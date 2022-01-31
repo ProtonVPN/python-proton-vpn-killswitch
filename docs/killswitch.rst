@@ -6,4 +6,12 @@ Killswitch
    :special-members: __init__
 
 
+Exceptions
+###########
+
+.. automodule:: protonvpn.killswitch.exceptions
+   :members:
+   :inherited-members:
+
+
 
