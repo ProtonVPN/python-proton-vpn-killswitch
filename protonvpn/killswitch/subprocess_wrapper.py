@@ -31,7 +31,8 @@ class SubprocessWrapper:
     def __init__(self):
         self._path_to_binaries = {}
         self.__search_for_matching_executables()
-        self.__ensure_executables_exist()
+        # FIXME : when we'll have a proper kill switch factory
+        #self.__ensure_executables_exist()
 
     def __search_for_matching_executables(self):
         """Searches for matching executables.

@@ -52,4 +52,5 @@ html_static_path = ['_static']
 
 # Order documentation in the same order as source
 autodoc_member_order = 'bysource'
+autodoc_mock_imports = ['dbus']
 #autodoc_mock_imports = ['proton']

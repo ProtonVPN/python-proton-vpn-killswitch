@@ -1,7 +1,7 @@
 Killswitch
 ----------
 
-.. autoclass:: protonvpn.killswitch.NMKillswitch
+.. autoclass:: protonvpn.killswitch.NMKillSwitch
    :members:
    :special-members: __init__
 
