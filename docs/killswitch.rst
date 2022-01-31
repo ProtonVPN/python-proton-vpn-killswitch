@@ -1,4 +1,4 @@
-Killswitch
+NMKillswitch
 ----------
 
 .. autoclass:: protonvpn.killswitch.NMKillSwitch
