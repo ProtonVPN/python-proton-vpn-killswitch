@@ -20,8 +20,8 @@ class NMKillSwitch:
     # Thus, to refrain SystemBus from using the default loop,
     # one extra loop is needed only to be passed, while it is never used.
     # https://dbus.freedesktop.org/doc/dbus-python/tutorial.html#setting-up-an-event-loop
-    dbus_loop = DBusGMainLoop()
-    bus = dbus.SystemBus(mainloop=dbus_loop)
+    _dbus_loop = DBusGMainLoop()
+    _bus = dbus.SystemBus(mainloop=_dbus_loop)
 
     """Manages killswitch connection/interfaces."""
     def __init__(
@@ -36,21 +36,21 @@ class NMKillSwitch:
         ipv6_dummy_addrs=IPv6_DUMMY_ADDRESS,
         ipv6_dummy_gateway=IPv6_DUMMY_GATEWAY,
     ):
-        self.ks_conn_name = ks_conn_name
-        self.ks_interface_name = ks_interface_name
-        self.routed_conn_name = routed_conn_name
-        self.routed_interface_name = routed_interface_name
-        self.ipv4_dummy_addrs = ipv4_dummy_addrs
-        self.ipv4_dummy_gateway = ipv4_dummy_gateway
-        self.ipv6_dummy_addrs = ipv6_dummy_addrs
-        self.ipv6_dummy_gateway = ipv6_dummy_gateway
-        self.nm_wrapper = nm_wrapper(self.bus)
-        self.interface_state_tracker = {
-            self.ks_conn_name: {
+        self._ks_conn_name = ks_conn_name
+        self._ks_interface_name = ks_interface_name
+        self._routed_conn_name = routed_conn_name
+        self._routed_interface_name = routed_interface_name
+        self._ipv4_dummy_addrs = ipv4_dummy_addrs
+        self._ipv4_dummy_gateway = ipv4_dummy_gateway
+        self._ipv6_dummy_addrs = ipv6_dummy_addrs
+        self._ipv6_dummy_gateway = ipv6_dummy_gateway
+        self._nm_wrapper = nm_wrapper(self._bus)
+        self._interface_state_tracker = {
+            self._ks_conn_name: {
                 KillSwitchInterfaceTrackerEnum.EXISTS: False,
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING: False
             },
-            self.routed_conn_name: {
+            self._routed_conn_name: {
                 KillSwitchInterfaceTrackerEnum.EXISTS: False,
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING: False
             }
@@ -78,7 +78,7 @@ class NMKillSwitch:
             KillSwitchActionEnum.POST_CONNECTION:
             self.setup_post_connection_ks,
             KillSwitchActionEnum.SOFT: self.setup_soft_connection,
-            KillSwitchActionEnum.DISABLE: self.delete_all_connections
+            KillSwitchActionEnum.DISABLE: self.disable_killswitch,
 
         }[action](server_ip)
 
@@ -89,21 +89,21 @@ class NMKillSwitch:
 
         if action == KillswitchStatusEnum.HARD:
             try:
-                self.delete_connection(self.routed_conn_name)
+                self.delete_connection(self._routed_conn_name)
             except: # noqa
                 pass
 
-            if not self.interface_state_tracker[self.ks_conn_name][
+            if not self._interface_state_tracker[self._ks_conn_name][
                 KillSwitchInterfaceTrackerEnum.EXISTS
             ]:
                 self.create_killswitch_connection()
                 return
             else:
-                self.activate_connection(self.ks_conn_name)
+                self.activate_connection(self._ks_conn_name)
         elif action in [
             KillswitchStatusEnum.SOFT, KillswitchStatusEnum.DISABLED
         ]:
-            self.delete_all_connections()
+            self.disable_killswitch()
         else:
             raise KillswitchError(
                 "Incorrect option for killswitch manager"
@@ -126,21 +126,21 @@ class NMKillSwitch:
 
         # happy path
         if (
-            self.interface_state_tracker[self.ks_conn_name][
+            self._interface_state_tracker[self._ks_conn_name][
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ]
-            and not self.interface_state_tracker[self.routed_conn_name][
+            and not self._interface_state_tracker[self._routed_conn_name][
                 KillSwitchInterfaceTrackerEnum.EXISTS
             ]
         ):
             self.create_routed_connection(server_ip)
-            self.deactivate_connection(self.ks_conn_name)
+            self.deactivate_connection(self._ks_conn_name)
             return
         elif (
-            not self.interface_state_tracker[self.ks_conn_name][
+            not self._interface_state_tracker[self._ks_conn_name][
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ]
-            and self.interface_state_tracker[self.routed_conn_name][
+            and self._interface_state_tracker[self._routed_conn_name][
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ]
         ):
@@ -148,23 +148,23 @@ class NMKillSwitch:
 
         # check for routed ks and remove if present/running
         if (
-            self.interface_state_tracker[self.routed_conn_name][
+            self._interface_state_tracker[self._routed_conn_name][
                 KillSwitchInterfaceTrackerEnum.EXISTS
             ]
-            and self.interface_state_tracker[self.routed_conn_name][
+            and self._interface_state_tracker[self._routed_conn_name][
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ]
         ):
-            self.delete_connection(self.routed_conn_name)
+            self.delete_connection(self._routed_conn_name)
 
         # check if ks exists. Start it if it does
         # if not then create and start it
         if (
-            self.interface_state_tracker[
-                self.ks_conn_name
+            self._interface_state_tracker[
+                self._ks_conn_name
             ][KillSwitchInterfaceTrackerEnum.EXISTS]
         ):
-            self.activate_connection(self.ks_conn_name)
+            self.activate_connection(self._ks_conn_name)
         else:
             self.create_killswitch_connection()
 
@@ -189,36 +189,36 @@ class NMKillSwitch:
 
         # happy path
         if (
-            not self.interface_state_tracker[self.ks_conn_name][
+            not self._interface_state_tracker[self._ks_conn_name][
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ]
-            and self.interface_state_tracker[self.routed_conn_name][
+            and self._interface_state_tracker[self._routed_conn_name][
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ]
         ):
-            self.activate_connection(self.ks_conn_name)
-            self.delete_connection(self.routed_conn_name)
+            self.activate_connection(self._ks_conn_name)
+            self.delete_connection(self._routed_conn_name)
 
             return
         elif (
             activating_soft_connection
             and (
-                not self.interface_state_tracker[self.routed_conn_name][
+                not self._interface_state_tracker[self._routed_conn_name][
                     KillSwitchInterfaceTrackerEnum.IS_RUNNING
-                ] or not self.interface_state_tracker[self.routed_conn_name][
+                ] or not self._interface_state_tracker[self._routed_conn_name][
                     KillSwitchInterfaceTrackerEnum.EXISTS
                 ]
             )
         ):
-            self.activate_connection(self.ks_conn_name)
+            self.activate_connection(self._ks_conn_name)
             return
         elif (
-            self.interface_state_tracker[self.ks_conn_name][
+            self._interface_state_tracker[self._ks_conn_name][
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ] and (
-                not self.interface_state_tracker[self.routed_conn_name][
+                not self._interface_state_tracker[self._routed_conn_name][
                     KillSwitchInterfaceTrackerEnum.EXISTS
-                ] or not self.interface_state_tracker[self.routed_conn_name][
+                ] or not self._interface_state_tracker[self._routed_conn_name][
                     KillSwitchInterfaceTrackerEnum.IS_RUNNING
                 ]
             )
@@ -227,18 +227,18 @@ class NMKillSwitch:
 
         # check for ks and disable it if is running
         if (
-            self.interface_state_tracker[self.ks_conn_name][
+            self._interface_state_tracker[self._ks_conn_name][
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ]
         ):
-            self.deactivate_connection(self.ks_conn_name)
+            self.deactivate_connection(self._ks_conn_name)
 
         # check if routed ks exists, if so then activate it
         # else raise exception
         if (
-            self.interface_state_tracker[self.routed_conn_name][KillSwitchInterfaceTrackerEnum.EXISTS] # noqa
+            self._interface_state_tracker[self._routed_conn_name][KillSwitchInterfaceTrackerEnum.EXISTS] # noqa
         ):
-            self.activate_connection(self.routed_conn_name)
+            self.activate_connection(self._routed_conn_name)
         else:
             raise Exception("Routed connection does not exist")
 
@@ -257,14 +257,14 @@ class NMKillSwitch:
         """Create killswitch connection/interface."""
         subprocess_command = [
             "nmcli", "c", "a", "type", "dummy",
-            "ifname", self.ks_interface_name,
-            "con-name", self.ks_conn_name,
+            "ifname", self._ks_interface_name,
+            "con-name", self._ks_conn_name,
             "ipv4.method", "manual",
-            "ipv4.addresses", self.ipv4_dummy_addrs,
-            "ipv4.gateway", self.ipv4_dummy_gateway,
+            "ipv4.addresses", self._ipv4_dummy_addrs,
+            "ipv4.gateway", self._ipv4_dummy_gateway,
             "ipv6.method", "manual",
-            "ipv6.addresses", self.ipv6_dummy_addrs,
-            "ipv6.gateway", self.ipv6_dummy_gateway,
+            "ipv6.addresses", self._ipv6_dummy_addrs,
+            "ipv6.gateway", self._ipv6_dummy_gateway,
             "ipv4.route-metric", "98",
             "ipv6.route-metric", "98",
             "ipv4.dns-priority", KILLSWITCH_DNS_PRIORITY_VALUE,
@@ -275,12 +275,12 @@ class NMKillSwitch:
             "ipv6.dns", "::1"
         ]
         self.update_connection_status()
-        if not self.interface_state_tracker[self.ks_conn_name][
+        if not self._interface_state_tracker[self._ks_conn_name][
             KillSwitchInterfaceTrackerEnum.EXISTS
         ]:
             self.create_connection(
-                self.ks_conn_name,
-                "Unable to activate {}".format(self.ks_conn_name),
+                self._ks_conn_name,
+                "Unable to activate {}".format(self._ks_conn_name),
                 subprocess_command, CreateBlockingKillswitchError
             )
 
@@ -302,13 +302,13 @@ class NMKillSwitch:
 
         subprocess_command = [
             "nmcli", "c", "a", "type", "dummy",
-            "ifname", self.routed_interface_name,
-            "con-name", self.routed_conn_name,
+            "ifname", self._routed_interface_name,
+            "con-name", self._routed_conn_name,
             "ipv4.method", "manual",
-            "ipv4.addresses", self.ipv4_dummy_addrs,
+            "ipv4.addresses", self._ipv4_dummy_addrs,
             "ipv6.method", "manual",
-            "ipv6.addresses", self.ipv6_dummy_addrs,
-            "ipv6.gateway", self.ipv6_dummy_gateway,
+            "ipv6.addresses", self._ipv6_dummy_addrs,
+            "ipv6.gateway", self._ipv6_dummy_gateway,
             "ipv4.route-metric", "97",
             "ipv6.route-metric", "97",
             "ipv4.routes", route_data_str,
@@ -323,13 +323,13 @@ class NMKillSwitch:
         if try_route_addrs:
             subprocess_command = [
                 "nmcli", "c", "a", "type", "dummy",
-                "ifname", self.routed_interface_name,
-                "con-name", self.routed_conn_name,
+                "ifname", self._routed_interface_name,
+                "con-name", self._routed_conn_name,
                 "ipv4.method", "manual",
                 "ipv4.addresses", route_data_str,
                 "ipv6.method", "manual",
-                "ipv6.addresses", self.ipv6_dummy_addrs,
-                "ipv6.gateway", self.ipv6_dummy_gateway,
+                "ipv6.addresses", self._ipv6_dummy_addrs,
+                "ipv6.gateway", self._ipv6_dummy_gateway,
                 "ipv4.route-metric", "97",
                 "ipv6.route-metric", "97",
                 "ipv4.dns-priority", KILLSWITCH_DNS_PRIORITY_VALUE,
@@ -340,11 +340,11 @@ class NMKillSwitch:
                 "ipv6.dns", "::1"
             ]
 
-        exception_msg = "Unable to activate {}".format(self.routed_conn_name)
+        exception_msg = "Unable to activate {}".format(self._routed_conn_name)
 
         try:
             self.create_connection(
-                self.routed_conn_name, exception_msg,
+                self._routed_conn_name, exception_msg,
                 subprocess_command, CreateRoutedKillswitchError
             )
         except CreateRoutedKillswitchError as e:
@@ -358,10 +358,10 @@ class NMKillSwitch:
         subprocess_command, exception
     ):
         self.update_connection_status()
-        if not self.interface_state_tracker[conn_name][
+        if not self._interface_state_tracker[conn_name][
             KillSwitchInterfaceTrackerEnum.EXISTS
         ]:
-            self.run_subprocess(
+            self._run_subprocess(
                 exception,
                 exception_msg,
                 subprocess_command
@@ -374,17 +374,17 @@ class NMKillSwitch:
             conn_name (string): connection name (uid)
         """
         self.update_connection_status()
-        conn_dict = self.nm_wrapper.search_for_connection( # noqa
+        conn_dict = self._nm_wrapper.search_for_connection( # noqa
             conn_name,
             return_device_path=True,
             return_settings_path=True
         )
         if (
-            self.interface_state_tracker[conn_name][
+            self._interface_state_tracker[conn_name][
                 KillSwitchInterfaceTrackerEnum.EXISTS
             ]
         ) and (
-            not self.interface_state_tracker[conn_name][
+            not self._interface_state_tracker[conn_name][
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ]
         ) and conn_dict:
@@ -392,7 +392,7 @@ class NMKillSwitch:
             settings_path = str(conn_dict.get("settings_path"))
 
             try:
-                active_conn = self.nm_wrapper.activate_connection(
+                active_conn = self._nm_wrapper.activate_connection(
                     settings_path, device_path
                 )
             except dbus.exceptions.DBusException as e:
@@ -413,18 +413,18 @@ class NMKillSwitch:
             conn_name (string): connection name (uid)
         """
         self.update_connection_status()
-        active_conn_dict = self.nm_wrapper.search_for_connection( # noqa
+        active_conn_dict = self._nm_wrapper.search_for_connection( # noqa
             conn_name, is_active=True,
             return_active_conn_path=True
         )
         if (
-            self.interface_state_tracker[conn_name][
+            self._interface_state_tracker[conn_name][
                 KillSwitchInterfaceTrackerEnum.IS_RUNNING
             ] and active_conn_dict
         ):
             active_conn_path = str(active_conn_dict.get("active_conn_path"))
             try:
-                self.nm_wrapper.disconnect_connection(
+                self._nm_wrapper.disconnect_connection(
                     active_conn_path
                 )
             except dbus.exceptions.DBusException as e:
@@ -444,8 +444,8 @@ class NMKillSwitch:
             "nmcli c delete {}".format(conn_name).split(" ")
 
         self.update_connection_status()
-        if self.interface_state_tracker[conn_name][KillSwitchInterfaceTrackerEnum.EXISTS]: # noqa
-            self.run_subprocess(
+        if self._interface_state_tracker[conn_name][KillSwitchInterfaceTrackerEnum.EXISTS]: # noqa
+            self._run_subprocess(
                 DeleteKillswitchError,
                 "Unable to delete {}".format(conn_name),
                 subprocess_command
@@ -453,50 +453,50 @@ class NMKillSwitch:
 
     def deactivate_all_connections(self):
         """Deactivate all connections."""
-        self.deactivate_connection(self.ks_conn_name)
-        self.deactivate_connection(self.routed_conn_name)
+        self.deactivate_connection(self._ks_conn_name)
+        self.deactivate_connection(self._routed_conn_name)
 
-    def delete_all_connections(self, _=None):
-        """Delete all connections."""
-        self.delete_connection(self.ks_conn_name)
-        self.delete_connection(self.routed_conn_name)
+    def disable_killswitch(self, _=None):
+        """Disable killswitch by deleting all NM connections related to it."""
+        self.delete_connection(self._ks_conn_name)
+        self.delete_connection(self._routed_conn_name)
 
     def update_connection_status(self):
         """Update connection/interface status."""
-        all_conns = self.nm_wrapper.get_all_connections()
-        active_conns = self.nm_wrapper.get_all_active_connections()
-        self.interface_state_tracker[self.ks_conn_name][KillSwitchInterfaceTrackerEnum.EXISTS] = False # noqa
-        self.interface_state_tracker[self.routed_conn_name][KillSwitchInterfaceTrackerEnum.EXISTS] = False  # noqa
-        self.interface_state_tracker[self.ks_conn_name][KillSwitchInterfaceTrackerEnum.IS_RUNNING] = False # noqa
-        self.interface_state_tracker[self.routed_conn_name][KillSwitchInterfaceTrackerEnum.IS_RUNNING] = False  # noqa
+        all_conns = self._nm_wrapper.get_all_connections()
+        active_conns = self._nm_wrapper.get_all_active_connections()
+        self._interface_state_tracker[self._ks_conn_name][KillSwitchInterfaceTrackerEnum.EXISTS] = False # noqa
+        self._interface_state_tracker[self._routed_conn_name][KillSwitchInterfaceTrackerEnum.EXISTS] = False  # noqa
+        self._interface_state_tracker[self._ks_conn_name][KillSwitchInterfaceTrackerEnum.IS_RUNNING] = False # noqa
+        self._interface_state_tracker[self._routed_conn_name][KillSwitchInterfaceTrackerEnum.IS_RUNNING] = False  # noqa
 
         for conn in all_conns:
             try:
-                conn_name = str(self.nm_wrapper.get_settings_from_connection(
+                conn_name = str(self._nm_wrapper.get_settings_from_connection(
                     conn
                 )["connection"]["id"])
             except dbus.exceptions.DBusException:
                 conn_name = "None"
 
-            if conn_name in self.interface_state_tracker:
-                self.interface_state_tracker[conn_name][
+            if conn_name in self._interface_state_tracker:
+                self._interface_state_tracker[conn_name][
                     KillSwitchInterfaceTrackerEnum.EXISTS
                 ] = True
 
         for active_conn in active_conns:
             try:
-                conn_name = str(self.nm_wrapper.get_active_connection_properties(
+                conn_name = str(self._nm_wrapper.get_active_connection_properties(
                     active_conn
                 )["Id"])
             except dbus.exceptions.DBusException:
                 conn_name = "None"
 
-            if conn_name in self.interface_state_tracker:
-                self.interface_state_tracker[conn_name][
+            if conn_name in self._interface_state_tracker:
+                self._interface_state_tracker[conn_name][
                     KillSwitchInterfaceTrackerEnum.IS_RUNNING
                 ] = True
 
-    def run_subprocess(self, exception, exception_msg, *args):
+    def _run_subprocess(self, exception, exception_msg, *args):
         """Run provided input via subprocess.
 
         Args:
@@ -543,7 +543,7 @@ class NMKillSwitch:
 
     def get_status_connectivity_check(self):
         """Check status of NM connectivity check."""
-        nm_props = self.nm_wrapper.get_network_manager_properties()
+        nm_props = self._nm_wrapper.get_network_manager_properties()
         is_conn_check_available = nm_props["ConnectivityCheckAvailable"]
         is_conn_check_enabled = nm_props["ConnectivityCheckEnabled"]
 
@@ -554,13 +554,13 @@ class NMKillSwitch:
     ):
         """Disable NetworkManager connectivity check."""
         if is_conn_check_enabled:
-            nm_methods = self.nm_wrapper.get_network_manager_properties_interface()
+            nm_methods = self._nm_wrapper.get_network_manager_properties_interface()
             nm_methods.Set(
                 "org.freedesktop.NetworkManager",
                 "ConnectivityCheckEnabled",
                 False
             )
-            nm_props = self.nm_wrapper.get_network_manager_properties()
+            nm_props = self._nm_wrapper.get_network_manager_properties()
             if nm_props["ConnectivityCheckEnabled"]:
                 raise DisableConnectivityCheckError(
                     "Can not disable connectivity check for killswitch"
