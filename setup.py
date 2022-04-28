@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 setup(
     name="python-protonvpn-killswitch",
@@ -9,8 +9,9 @@ setup(
     author="Proton Technologies",
     author_email="contact@protonmail.com",
     url="https://github.com/ProtonMail/pyhon-protonvpn-connection",
-    packages=find_packages(),
+    packages=find_namespace_packages(include=['proton.vpn.killswitch']),
     include_package_data=True,
+    install_requires=["proton-core"],
     license="GPLv3",
     platforms="OS Independent",
     classifiers=[
