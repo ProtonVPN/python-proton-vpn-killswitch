@@ -1,37 +1,47 @@
 from .exceptions import MissingKillSwitchBackendDetails
-from enum import IntEnum
-
-
-class KillSwitchStateEnum(IntEnum):
-    OFF = 0
-    ON = 1
-    PERMANENT = 2
+from .enums import KillSwitchStateEnum
 
 
 class KillSwitch:
-    def __init__(self):
+    def __init__(self, permanent=False):
         # should have a auto determine method, to understand if there
-        # self._determine_initial_state()
-        self.__state = KillSwitchStateEnum.OFF
+        self.__permanent = permanent
 
     def off(self):
-        self.__state = KillSwitchStateEnum.OFF
         self._setup_off()
+        self.__state = KillSwitchStateEnum.OFF
 
-    def on(self, *args):
+    def on(self):
         self.__state = KillSwitchStateEnum.ON
-        self._setup_on()
 
-    def permanent(self, *args):
-        self.__state = KillSwitchStateEnum.PERMANENT
-        self._setup_permanent()
+    @property
+    def permanent(self):
+        return self.__permanent
+
+    @permanent.setter
+    def permanent(self, newvalue):
+        if self.__state != KillSwitchStateEnum.OFF:
+            self._setup_permanent()
+
+        self.__permanent = newvalue
 
     @property
     def state(self):
         return self.__state
 
-    def status_update(self, state: "proton.vpn.connection.states.BaseState"):
-        raise NotImplementedError
+    def connection_status_update(self, state: "proton.vpn.connection.states.BaseState", **kwargs):
+        from proton.vpn.connection import states
+
+        if isinstance(state, states.Disconnected()):
+            self._on_disconnected(**kwargs)
+        elif isinstance(state, states.Connecting()):
+            self._on_connecting(**kwargs)
+        elif isinstance(state, states.Connected()):
+            self._on_connected(**kwargs)
+        elif isinstance(state, states.Error()):
+            self._on_error(**kwargs)
+        elif isinstance(state, states.Disconnecting()):
+            self._on_disconnecting(**kwargs)
 
     @classmethod
     def get_from_factory(self, backend: str = None):
@@ -98,7 +108,7 @@ class KillSwitch:
     def _validate(cls):
         return False
 
-    def _setup_on(self):
+    def _determine_initial_state(self):
         raise NotImplementedError
 
     def _setup_off(self):
@@ -107,5 +117,17 @@ class KillSwitch:
     def _setup_permanent(self):
         raise NotImplementedError
 
-    def _determine_initial_state(self):
+    def _on_disconnected(self, **kwargs):
+        pass
+
+    def _on_connecting(self, **kwargs):
+        raise NotImplementedError
+
+    def _on_connected(self, **kwargs):
+        raise NotImplementedError
+
+    def _on_error(self, **kwargs):
+        raise NotImplementedError
+
+    def _on_disconnecting(self, **kwargs):
         raise NotImplementedError
