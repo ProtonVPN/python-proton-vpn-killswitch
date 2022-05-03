@@ -3,44 +3,53 @@ from .enums import KillSwitchStateEnum
 
 
 class KillSwitch:
-    def __init__(self, permanent=False):
-        # should have a auto determine method, to understand if there
+    def __init__(self, state: KillSwitchStateEnum = KillSwitchStateEnum.OFF, permanent: bool = False):
+        self.__state = state
         self.__permanent = permanent
+
+    def __str__(self):
+        return "{} <State: {} Permanent: {}>".format(type(self).__name__, self.__state, self.__permanent)
 
     def off(self):
         self._setup_off()
         self.__state = KillSwitchStateEnum.OFF
 
     def on(self):
+        if self.__permanent:
+            self._setup_killswitch()
+
         self.__state = KillSwitchStateEnum.ON
 
     @property
-    def permanent(self):
+    def permanent(self) -> bool:
         return self.__permanent
 
     @permanent.setter
-    def permanent(self, newvalue):
+    def permanent(self, newvalue: bool):
         if self.__state != KillSwitchStateEnum.OFF:
-            self._setup_permanent()
+            if newvalue:
+                self._setup_killswitch()
+            else:
+                self._setup_off()
 
         self.__permanent = newvalue
 
     @property
-    def state(self):
+    def state(self) -> KillSwitchStateEnum:
         return self.__state
 
     def connection_status_update(self, state: "proton.vpn.connection.states.BaseState", **kwargs):
         from proton.vpn.connection import states
 
-        if isinstance(state, states.Disconnected()):
+        if isinstance(state, states.Disconnected):
             self._on_disconnected(**kwargs)
-        elif isinstance(state, states.Connecting()):
+        elif isinstance(state, states.Connecting):
             self._on_connecting(**kwargs)
-        elif isinstance(state, states.Connected()):
+        elif isinstance(state, states.Connected):
             self._on_connected(**kwargs)
-        elif isinstance(state, states.Error()):
+        elif isinstance(state, states.Error):
             self._on_error(**kwargs)
-        elif isinstance(state, states.Disconnecting()):
+        elif isinstance(state, states.Disconnecting):
             self._on_disconnecting(**kwargs)
 
     @classmethod
@@ -65,6 +74,27 @@ class KillSwitch:
                 continue
 
             return backend.cls()
+
+    def _setup_off(self):
+        raise NotImplementedError
+
+    def _setup_killswitch(self):
+        raise NotImplementedError
+
+    def _on_disconnected(self, **kwargs):
+        pass
+
+    def _on_connecting(self, **kwargs):
+        raise NotImplementedError
+
+    def _on_connected(self, **kwargs):
+        raise NotImplementedError
+
+    def _on_error(self, **kwargs):
+        raise NotImplementedError
+
+    def _on_disconnecting(self, **kwargs):
+        raise NotImplementedError
 
     @classmethod
     def _get_priority(cls) -> int:
@@ -107,27 +137,3 @@ class KillSwitch:
     @classmethod
     def _validate(cls):
         return False
-
-    def _determine_initial_state(self):
-        raise NotImplementedError
-
-    def _setup_off(self):
-        raise NotImplementedError
-
-    def _setup_permanent(self):
-        raise NotImplementedError
-
-    def _on_disconnected(self, **kwargs):
-        pass
-
-    def _on_connecting(self, **kwargs):
-        raise NotImplementedError
-
-    def _on_connected(self, **kwargs):
-        raise NotImplementedError
-
-    def _on_error(self, **kwargs):
-        raise NotImplementedError
-
-    def _on_disconnecting(self, **kwargs):
-        raise NotImplementedError
