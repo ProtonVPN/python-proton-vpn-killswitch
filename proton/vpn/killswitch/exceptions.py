@@ -16,17 +16,13 @@ class MissingKillSwitchBackendDetails(KillSwitchError):
     """
 
 
-class StartIPv4KillSwitchError:
-    """When unable to start killswitch for IPv4 protocol then this exception is raised."""
+class KillSwitchStartError(KillSwitchError):
+    """When unable to start killswitch then this exception is raised."""
 
 
-class StopIPv4KillSwitchError:
-    """When unable to stop killswitch for IPv4 protocol then this exception is raised."""
+class KillSwitchStopError(KillSwitchError):
+    """When unable to stop killswitch then this exception is raised."""
 
 
-class StartIPv6KillSwitchError:
-    """When unable to start killswitch for IPv6 protocol then this exception is raised."""
-
-
-class StopIPv6KillSwitchError:
-    """When unable to stop killswitch for IPv6 protocol then this exception is raised."""
+class MissingKeyValueError(KillSwitchError):
+    """When backend expects certain kwargs but none are passed, this exceptions is raised."""
