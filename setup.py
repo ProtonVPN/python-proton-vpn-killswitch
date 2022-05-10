@@ -3,14 +3,15 @@
 from setuptools import setup, find_namespace_packages
 
 setup(
-    name="python-protonvpn-killswitch",
-    version="0.0.0",
+    name="proton-vpn-killswitch",
+    version="0.0.1",
     description="Proton Technologies VPN Killswitch for linux",
     author="Proton Technologies",
     author_email="contact@protonmail.com",
     url="https://github.com/ProtonMail/pyhon-protonvpn-connection",
     packages=find_namespace_packages(include=['proton.vpn.killswitch']),
     include_package_data=True,
+    python_requires=">=3.8",
     install_requires=["proton-core"],
     license="GPLv3",
     platforms="OS Independent",
