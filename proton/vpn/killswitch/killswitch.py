@@ -1,5 +1,6 @@
 from .exceptions import MissingKillSwitchBackendDetails
 from .enums import KillSwitchStateEnum
+from proton.vpn.connection.states import BaseState
 
 
 class KillSwitch:
@@ -18,8 +19,8 @@ class KillSwitch:
     For that reason, the methods that `raise NotImplementedError`
     have to implement their own logic on how to act upon these connection status changes.
 
-    About the permanent mode, given that it's just a variation of the `on` state, it did not make
-    sense to have its own "switch mode", but rather be a modifier of the `on` state.
+    About the permanent mode, given that it's just a variation of the `on` state, thus only taking
+    effect only when the kill switch is in its `on` state.
 
     Usage:
 
@@ -27,7 +28,10 @@ class KillSwitch:
 
         from proton.vpn.killswitch import KillSwitch
 
-        killswitch = KillSwitch.get_from_factory()
+        killswitch_backend = KillSwitch.get_from_factory()
+
+        # Instantiate the class
+        killswitch = killswitch_backend()
 
         # Change component state to off.
         killswitch.off()
@@ -36,14 +40,20 @@ class KillSwitch:
         killswitch.on()
 
         # Enable permanent mode. This will directly start the kill switch and
-        # you'll be without internet connection.
-        killswitch.permanent = True
+        # you'll be without internet connection, only if kill switch is `on`.
+        killswitch.permanent_mode_enable()
 
         # Changing component state back to off will turn off the permanent mode,
         # thus restoring internet connection.
         killswitch.off()
     """
     def __init__(self, state: KillSwitchStateEnum = KillSwitchStateEnum.OFF, permanent: bool = False):
+        if not any([state is known_state for known_state in [value for _, value in KillSwitchStateEnum.__members__.items()]]):
+            raise TypeError(
+                "Wrong type for 'state' argument. Expected {} but got {}"
+                .format(KillSwitchStateEnum, type(state))
+            )
+
         self.__state = state
         self.__permanent = permanent
 
@@ -74,26 +84,32 @@ class KillSwitch:
         self.__state = KillSwitchStateEnum.ON
 
     @property
-    def permanent(self) -> bool:
+    def permanent_mode(self) -> bool:
         """
-            :return: permanent modifier
+            :return: permanent mode
             :rtype: bool
         """
         return self.__permanent
 
-    @permanent.setter
-    def permanent(self, newvalue: bool):
+    def permanent_mode_enable(self):
         """
-            :param newvalue: permanent modifier value
-            :type newvalue: bool
+        Enables permanent mode. It will only do so if the
+        kill switch state is `on`.
         """
         if self.__state != KillSwitchStateEnum.OFF:
-            if newvalue:
-                self._setup_killswitch()
-            else:
-                self._setup_off()
+            self._setup_killswitch()
 
-        self.__permanent = newvalue
+        self.__permanent = True
+
+    def permanent_mode_disable(self):
+        """
+        Disables permanent mode. It will only do so if the
+        kill switch state is `on`.
+        """
+        if self.__state != KillSwitchStateEnum.OFF:
+            self._setup_off()
+
+        self.__permanent = False
 
     @property
     def state(self) -> KillSwitchStateEnum:
@@ -103,10 +119,10 @@ class KillSwitch:
         """
         return self.__state
 
-    def connection_status_update(self, state: "proton.vpn.connection.states.BaseState", **kwargs):
+    def connection_status_update(self, state: BaseState, **kwargs):
         """
             :param newvalue: permanent modifier value
-            :type newvalue: proton.vpn.connection.states.BaseState
+            :type newvalue: BaseState
 
         This method receives connection status updates, so that it can act upon
         each connection state invidually. It is up to the backend to implement
@@ -140,29 +156,14 @@ class KillSwitch:
          - The backend exists/is installed
          - The backend passes the `_validate()`
          - The backend with the highest `_get_priority()` value
-
-
         """
         from proton.loader import Loader
-        all_backends = Loader.get_all("killswitch")
-        sorted_backends = sorted(all_backends, key=lambda _b: _b.priority, reverse=True)
+        try:
+            backend = Loader.get("killswitch", class_name=backend)
+        except RuntimeError as e:
+            raise MissingKillSwitchBackendDetails(e)
 
-        if backend:
-            try:
-                return [
-                    _b.cls for _b in sorted_backends
-                    if _b.class_name == backend and _b.cls._validate()
-                ][0]()
-            except (IndexError, AttributeError):
-                raise MissingKillSwitchBackendDetails(
-                    "Backend \"{}\" could not be found".format(backend)
-                )
-
-        for backend in sorted_backends:
-            if not backend.cls._validate():
-                continue
-
-            return backend.cls()
+        return backend
 
     def _setup_off(self):
         """
@@ -225,40 +226,6 @@ class KillSwitch:
 
     @classmethod
     def _get_priority(cls) -> int:
-        """*For developers*
-
-        Priority value determines which backend takes precedence.
-
-        If no specific backend has been defined then each connection
-        backend class to calculate it's priority value. This priority value is
-        then used by the factory to select the optimal backend for
-        establishing a connection.
-
-        The lower the value, the more priority it has.
-
-        Network manager will always have priority, thus it will always have the value of 100.
-        If NetworkManage packages are installed but are not running, then any other backend
-        will take precedence.
-
-        Usage:
-
-        .. code-block::
-
-            from proton.vpn.killswitch import KillSwitch
-
-            class CustomBackend(KillSwitch):
-                backend = "custom_backend"
-
-                ...
-
-                @classmethod
-                def _get_priority(cls):
-                    # Either return a hard-coded value (which is discoureaged),
-                    # or calculate it based on some system settings
-                    return 150
-
-        Note: Some code has been ommitted for readability.
-        """
         return None
 
     @classmethod
