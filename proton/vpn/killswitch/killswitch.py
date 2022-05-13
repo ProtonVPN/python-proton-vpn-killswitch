@@ -67,10 +67,10 @@ class KillSwitch:
 
         Should be used when it's desired to completly stop the kill switch.
         """
-        self._setup_off()
+        self._disable()
         self.__state = KillSwitchStateEnum.OFF
 
-    def on(self):
+    def on(self, permament):
         """
         Turns on the component. In this state it will act on state updates
         for a given connection and the permanent modifier.
@@ -79,9 +79,17 @@ class KillSwitch:
         its `on` state, then all internet connection will be cut straight away.
         """
         if self.__permanent:
-            self._setup_killswitch()
+            self._enable()
 
         self.__state = KillSwitchStateEnum.ON
+
+    @property
+    def state(self) -> KillSwitchStateEnum:
+        """
+            :return: kill switch state
+            :rtype: KillSwitchStateEnum
+        """
+        return self.__state
 
     @property
     def permanent_mode(self) -> bool:
@@ -97,7 +105,7 @@ class KillSwitch:
         kill switch state is `on`.
         """
         if self.__state != KillSwitchStateEnum.OFF:
-            self._setup_killswitch()
+            self._enable()
 
         self.__permanent = True
 
@@ -107,17 +115,9 @@ class KillSwitch:
         kill switch state is `on`.
         """
         if self.__state != KillSwitchStateEnum.OFF:
-            self._setup_off()
+            self._disable()
 
         self.__permanent = False
-
-    @property
-    def state(self) -> KillSwitchStateEnum:
-        """
-            :return: kill switch state
-            :rtype: KillSwitchStateEnum
-        """
-        return self.__state
 
     def connection_status_update(self, state: BaseState, **kwargs):
         """
@@ -138,10 +138,6 @@ class KillSwitch:
             self._on_connecting(**kwargs)
         elif isinstance(state, states.Connected):
             self._on_connected(**kwargs)
-        elif isinstance(state, states.Error):
-            self._on_error(**kwargs)
-        elif isinstance(state, states.Disconnecting):
-            self._on_disconnecting(**kwargs)
 
     @classmethod
     def get_from_factory(self, backend: str = None):
@@ -164,28 +160,6 @@ class KillSwitch:
             raise MissingKillSwitchBackendDetails(e)
 
         return backend
-
-    def _setup_off(self):
-        """
-        Remove all kill switch constraints.
-        Ensure that it totally removes all contraints/rules/limits,
-        if that is not possible for some reason, one of the followin exceptions
-        can be thrown:
-
-        :raises KillSwitchStopError: When unable to stop the kill switch
-        """
-        raise NotImplementedError
-
-    def _setup_killswitch(self):
-        """
-        Add/activate kill switch instantaneously.
-        Ensure that it add the contraints/rules/limits,
-        if that is not possible for some reason, one of the followin exceptions
-        can be thrown:
-
-        :raises KillSwitchStartError: When unable to start the kill switch
-        """
-        raise NotImplementedError
 
     def _on_disconnected(self, **kwargs):
         """
@@ -210,17 +184,23 @@ class KillSwitch:
         """
         raise NotImplementedError
 
-    def _on_error(self, **kwargs):
+    def _disable(self):
         """
-        :raises KillSwitchStartError: When unable to start the kill switch
+        Disables kill switch. It completly should
+        remove all contraints/rules/limits, if that is not possible
+        for some reason, one of the followin exceptions can be thrown:
+
         :raises KillSwitchStopError: When unable to stop the kill switch
         """
         raise NotImplementedError
 
-    def _on_disconnecting(self, **kwargs):
+    def _enable(self):
         """
+        Enable kill switch instantaneously.
+        Ensure that it add the contraints/rules/limits, if that is not possible
+        for some reason, one of the followin exceptions can be thrown:
+
         :raises KillSwitchStartError: When unable to start the kill switch
-        :raises KillSwitchStopError: When unable to stop the kill switch
         """
         raise NotImplementedError
 

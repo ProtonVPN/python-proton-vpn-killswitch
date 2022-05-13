@@ -26,3 +26,7 @@ class KillSwitchStopError(KillSwitchError):
 
 class MissingKeyValueError(KillSwitchError):
     """When backend expects certain kwargs but none are passed, this exceptions is raised."""
+
+
+class UnexpectedKillSwitchStateError(KillSwitchError):
+    """When the kill switch finds itself in an unexpected state, this exception is raised."""
