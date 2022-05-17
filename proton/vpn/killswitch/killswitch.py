@@ -54,11 +54,22 @@ class KillSwitch:
                 .format(KillSwitchStateEnum, type(state))
             )
 
-        self.__state = state
-        self.__permanent = permanent
+        self.__state = None
+        self.__permanent = None
+
+        if state is KillSwitchStateEnum.ON:
+            self.on(permanent)
+        else:
+            self.off()
+            if permanent:
+                self.permanent_mode_enable()
+            else:
+                self.permanent_mode_disable()
 
     def __str__(self):
-        return "{} <State: {} Permanent: {}>".format(type(self).__name__, self.__state, self.__permanent)
+        return "{} <State: {} Permanent: {}>".format(
+            type(self).__name__, self.__state, self.__permanent
+        )
 
     def off(self):
         """
@@ -78,6 +89,7 @@ class KillSwitch:
         If the permanent modifier was enabled before turning the kill switch to
         its `on` state, then all internet connection will be cut straight away.
         """
+        self.__permanent = permament
         if self.__permanent:
             self._enable()
 
@@ -163,44 +175,40 @@ class KillSwitch:
 
     def _on_disconnected(self, **kwargs):
         """
-        :raises KillSwitchStartError: When unable to start the kill switch
-        :raises KillSwitchStopError: When unable to stop the kill switch
+        :raises KillSwitchException: If unable to make changes to kill switch
         """
-        raise NotImplementedError
+        if self.state == KillSwitchStateEnum.ON and not self.permanent_mode:
+            self._disable(**kwargs)
 
     def _on_connecting(self, **kwargs):
         """
-        :raises KillSwitchStartError: When unable to start the kill switch
-        :raises KillSwitchStopError: When unable to stop the kill switch
-        :raises KeyError: When the expected key is not passed
-        :raises TypeError: When expected value to provided key is `None`
+        :raises KillSwitchException: If unable to make changes to kill switch
         """
-        raise NotImplementedError
+        if self.state == KillSwitchStateEnum.ON and self.permanent_mode:
+            self._enable(**kwargs)
 
     def _on_connected(self, **kwargs):
         """
-        :raises KillSwitchStartError: When unable to start the kill switch
-        :raises KillSwitchStopError: When unable to stop the kill switch
+        :raises KillSwitchException: If unable to make changes to kill switch
         """
-        raise NotImplementedError
+        if self.state == KillSwitchStateEnum.ON:
+            self._enable(**kwargs)
 
-    def _disable(self):
+    def _disable(self, **kwargs):
         """
         Disables kill switch. It completly should
-        remove all contraints/rules/limits, if that is not possible
-        for some reason, one of the followin exceptions can be thrown:
+        remove all contraints/rules/limits.
 
-        :raises KillSwitchStopError: When unable to stop the kill switch
+        :raises KillSwitchException: If unable to make changes to kill switch
         """
         raise NotImplementedError
 
-    def _enable(self):
+    def _enable(self, **kwargs):
         """
         Enable kill switch instantaneously.
-        Ensure that it add the contraints/rules/limits, if that is not possible
-        for some reason, one of the followin exceptions can be thrown:
+        Ensure that it add the contraints/rules/limits.
 
-        :raises KillSwitchStartError: When unable to start the kill switch
+        :raises KillSwitchException: If unable to make changes to kill switch
         """
         raise NotImplementedError
 
