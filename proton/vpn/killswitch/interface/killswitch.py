@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .exceptions import MissingKillSwitchBackendDetails
-from .enums import KillSwitchStateEnum
+from proton.vpn.killswitch.interface.exceptions import MissingKillSwitchBackendDetails
+from proton.vpn.killswitch.interface.enums import KillSwitchStateEnum
 from proton.vpn.connection.states import BaseState
 
 

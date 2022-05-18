@@ -9,7 +9,7 @@ setup(
     author="Proton Technologies",
     author_email="contact@protonmail.com",
     url="https://github.com/ProtonMail/pyhon-protonvpn-connection",
-    packages=find_namespace_packages(include=['proton.vpn.killswitch']),
+    packages=find_namespace_packages(include=['proton.vpn.killswitch.interface']),
     include_package_data=True,
     python_requires=">=3.8",
     install_requires=["proton-core", "proton-vpn-connection"],
