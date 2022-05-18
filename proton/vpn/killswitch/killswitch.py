@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .exceptions import MissingKillSwitchBackendDetails
 from .enums import KillSwitchStateEnum
 from proton.vpn.connection.states import BaseState
@@ -8,9 +10,9 @@ class KillSwitch:
     The `KillSwitch` is the base class from which all other kill switch
     backends need to derive from.
 
-    The `on()` and `off()` methods are meant to controll the state of the component,
-    akin to a switch. If the component is in `off` state, then the `permament`
-    property and any connection updates are disregarded. Thus it will not act
+    The `on()` and `off()` methods are meant to control the state of the component,
+    akin to a switch. If the component is in `off` state, then the `permanent`
+    property and any connection updates are disregarded. Thus, it will not act
     unless its state is set to `on`, preventing any unwanted behaviours and always giving
     expected results.
 
@@ -73,15 +75,15 @@ class KillSwitch:
 
     def off(self):
         """
-        Turns off the component. In this state it will completly
+        Turns off the component. In this state it will completely
         disregard connection state updates and the permanent modifier.
 
-        Should be used when it's desired to completly stop the kill switch.
+        Should be used when it's desired to completely stop the kill switch.
         """
         self._disable()
         self.__state = KillSwitchStateEnum.OFF
 
-    def on(self, permament):
+    def on(self, permanent: bool):
         """
         Turns on the component. In this state it will act on state updates
         for a given connection and the permanent modifier.
@@ -89,7 +91,7 @@ class KillSwitch:
         If the permanent modifier was enabled before turning the kill switch to
         its `on` state, then all internet connection will be cut straight away.
         """
-        self.__permanent = permament
+        self.__permanent = permanent
         if self.__permanent:
             self._enable()
 
@@ -133,13 +135,12 @@ class KillSwitch:
 
     def connection_status_update(self, state: BaseState, **kwargs):
         """
-            :param newvalue: permanent modifier value
-            :type newvalue: BaseState
+            :param state: current connection state.
 
         This method receives connection status updates, so that it can act upon
-        each connection state invidually. It is up to the backend to implement
+        each connection state individually. It is up to the backend to implement
         the desired kill switch behaviour in each connection state.
-        Additionally `kwargs` can be passed for any additional/extra
+        Additionally, `kwargs` can be passed for any additional/extra
         information that could be necessary for the backends.
         """
         from proton.vpn.connection import states
@@ -152,11 +153,10 @@ class KillSwitch:
             self._on_connected(**kwargs)
 
     @classmethod
-    def get_from_factory(self, backend: str = None):
+    def get_from_factory(cls, backend: str = None) -> KillSwitch:
         """
             :param backend: Optional.
-                specific backend name
-            :type protocol: str
+                Specific backend name.
 
         If backend is passed then it will attempt to get that specific
         backend, otherwise it will attempt to get the default backend.
@@ -175,21 +175,21 @@ class KillSwitch:
 
     def _on_disconnected(self, **kwargs):
         """
-        :raises KillSwitchException: If unable to make changes to kill switch
+        :raises KillSwitchError: If unable to make changes to kill switch.
         """
         if self.state == KillSwitchStateEnum.ON and not self.permanent_mode:
             self._disable(**kwargs)
 
     def _on_connecting(self, **kwargs):
         """
-        :raises KillSwitchException: If unable to make changes to kill switch
+        :raises KillSwitchError: If unable to make changes to kill switch.
         """
         if self.state == KillSwitchStateEnum.ON and self.permanent_mode:
             self._enable(**kwargs)
 
     def _on_connected(self, **kwargs):
         """
-        :raises KillSwitchException: If unable to make changes to kill switch
+        :raises KillSwitchError: If unable to make changes to kill switch.
         """
         if self.state == KillSwitchStateEnum.ON:
             self._enable(**kwargs)
@@ -199,7 +199,7 @@ class KillSwitch:
         Disables kill switch. It completly should
         remove all contraints/rules/limits.
 
-        :raises KillSwitchException: If unable to make changes to kill switch
+        :raises KillSwitchError: If unable to make changes to kill switch.
         """
         raise NotImplementedError
 
@@ -208,7 +208,7 @@ class KillSwitch:
         Enable kill switch instantaneously.
         Ensure that it add the contraints/rules/limits.
 
-        :raises KillSwitchException: If unable to make changes to kill switch
+        :raises KillSwitchError: If unable to make changes to kill switch.
         """
         raise NotImplementedError
 
