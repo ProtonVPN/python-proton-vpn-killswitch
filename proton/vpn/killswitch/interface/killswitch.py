@@ -57,21 +57,38 @@ class KillSwitch:
             )
 
         self.__state = None
-        self.__permanent = None
+        self.__permanent = permanent
 
         if state is KillSwitchStateEnum.ON:
             self.on(permanent)
         else:
             self.off()
-            if permanent:
-                self.permanent_mode_enable()
-            else:
-                self.permanent_mode_disable()
 
     def __str__(self):
         return "{} <State: {} Permanent: {}>".format(
             type(self).__name__, self.__state, self.__permanent
         )
+
+    @classmethod
+    def get_from_factory(cls, backend: str = None) -> KillSwitch:
+        """
+            :param backend: Optional.
+                Specific backend name.
+
+        If backend is passed then it will attempt to get that specific
+        backend, otherwise it will attempt to get the default backend.
+        The definition of default is as follows:
+         - The backend exists/is installed
+         - The backend passes the `_validate()`
+         - The backend with the highest `_get_priority()` value
+        """
+        from proton.loader import Loader
+        try:
+            backend = Loader.get("killswitch", class_name=backend)
+        except RuntimeError as e:
+            raise MissingKillSwitchBackendDetails(e)
+
+        return backend
 
     def off(self):
         """
@@ -151,27 +168,6 @@ class KillSwitch:
             self._on_connecting(**kwargs)
         elif isinstance(state, states.Connected):
             self._on_connected(**kwargs)
-
-    @classmethod
-    def get_from_factory(cls, backend: str = None) -> KillSwitch:
-        """
-            :param backend: Optional.
-                Specific backend name.
-
-        If backend is passed then it will attempt to get that specific
-        backend, otherwise it will attempt to get the default backend.
-        The definition of default is as follows:
-         - The backend exists/is installed
-         - The backend passes the `_validate()`
-         - The backend with the highest `_get_priority()` value
-        """
-        from proton.loader import Loader
-        try:
-            backend = Loader.get("killswitch", class_name=backend)
-        except RuntimeError as e:
-            raise MissingKillSwitchBackendDetails(e)
-
-        return backend
 
     def _on_disconnected(self, **kwargs):
         """

@@ -1,0 +1,5 @@
+[run]
+omit = 
+    proton/vpn/killswitch/interface/exceptions.py
+    proton/vpn/killswitch/interface/enums.py
+    proton/vpn/killswitch/interface/__init__.py
