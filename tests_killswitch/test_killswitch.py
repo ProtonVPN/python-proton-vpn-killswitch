@@ -1,10 +1,12 @@
+from enum import IntEnum
+from unittest.mock import patch
+
 import pytest
+from proton.vpn.connection import states
 from proton.vpn.killswitch.interface import KillSwitch
 from proton.vpn.killswitch.interface.enums import KillSwitchStateEnum
-from proton.vpn.killswitch.interface.exceptions import MissingKillSwitchBackendDetails
-from proton.vpn.connection import states
-from unittest.mock import patch
-from enum import IntEnum
+from proton.vpn.killswitch.interface.exceptions import \
+    MissingKillSwitchBackendDetails, KillSwitchException
 
 
 class RandomEnum(IntEnum):
@@ -58,7 +60,17 @@ def test_default_init(modified_loader):
 
 def test_get_from_factory_raises_exception_when_called_with_invalid_state(modified_loader):
     with pytest.raises(TypeError):
-        KillSwitch.get_from_factory()(RandomEnum.RANDOM, None)
+        KillSwitch.get_from_factory()(RandomEnum.RANDOM, False)
+
+
+def test_get_from_factory_raises_exception_when_called_with_permanent_modifier(modified_loader):
+    with pytest.raises(TypeError):
+        KillSwitch.get_from_factory()(KillSwitchStateEnum.ON, "On")
+
+
+def test_get_from_factory_raises_exception_when_called_with_state_off_and_permanent_modifier_true(modified_loader):
+    with pytest.raises(KillSwitchException):
+        KillSwitch.get_from_factory()(KillSwitchStateEnum.OFF, True)
 
 
 @pytest.mark.parametrize(
@@ -67,7 +79,6 @@ def test_get_from_factory_raises_exception_when_called_with_invalid_state(modifi
         (KillSwitchStateEnum.ON, False, None),
         (KillSwitchStateEnum.ON, True,  True),
         (KillSwitchStateEnum.OFF, False, False),
-        (KillSwitchStateEnum.OFF, True, False),
     ]
 )
 def test_init_with_expected_args(modified_loader, state, permanent, should_ks_be_enabled):
@@ -81,7 +92,6 @@ def test_init_with_expected_args(modified_loader, state, permanent, should_ks_be
     "state, permanent, connection_status, initial_should_ks_be_enabled, should_ks_be_enabled",
     [
         (KillSwitchStateEnum.OFF, False, states.Disconnected(), False, False),
-        (KillSwitchStateEnum.OFF, True, states.Disconnected(), False, False),
         (KillSwitchStateEnum.ON, False, states.Disconnected(), None, False),
         (KillSwitchStateEnum.ON, True, states.Disconnected(), True, True),
     ]
@@ -100,7 +110,6 @@ def test_expected_connection_status_updates_on_disconnected(
     "state, permanent, connection_status, initial_should_ks_be_enabled, should_ks_be_enabled",
     [
         (KillSwitchStateEnum.OFF, False, states.Connecting(), False, False),
-        (KillSwitchStateEnum.OFF, True, states.Connecting(), False, False),
         (KillSwitchStateEnum.ON, False, states.Connecting(), None, None),
         (KillSwitchStateEnum.ON, True, states.Connecting(), True, True),
     ]
@@ -119,7 +128,6 @@ def test_expected_connection_status_updates_on_connecting(
     "state, permanent, connection_status, initial_should_ks_be_enabled, should_ks_be_enabled",
     [
         (KillSwitchStateEnum.OFF, False, states.Connected(), False, False),
-        (KillSwitchStateEnum.OFF, True, states.Connected(), False, False),
         (KillSwitchStateEnum.ON, False, states.Connected(), None, True),
         (KillSwitchStateEnum.ON, True, states.Connected(), True, True),
     ]
@@ -157,7 +165,6 @@ def test_permanet_mode_enable(modified_loader, state, permanent, initial_should_
 @pytest.mark.parametrize(
     "state, permanent, initial_should_ks_be_enabled, should_ks_be_enabled",
     [
-        (KillSwitchStateEnum.OFF, True, False, False),
         (KillSwitchStateEnum.ON, True, True, False),
     ]
 )

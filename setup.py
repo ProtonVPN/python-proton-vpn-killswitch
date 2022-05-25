@@ -12,7 +12,7 @@ setup(
     packages=find_namespace_packages(include=['proton.vpn.killswitch.interface']),
     include_package_data=True,
     python_requires=">=3.8",
-    install_requires=["proton-core", "proton-vpn-connection"],
+    install_requires=["proton-vpn-connection"],
     extras_require={
         "test": ["pytest", "pytest-cov"]
     },

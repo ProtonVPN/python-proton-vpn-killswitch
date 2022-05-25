@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from proton.vpn.killswitch.interface.exceptions import MissingKillSwitchBackendDetails
+from proton.vpn.killswitch.interface.exceptions import MissingKillSwitchBackendDetails, KillSwitchException
 from proton.vpn.killswitch.interface.enums import KillSwitchStateEnum
 from proton.vpn.connection.states import BaseState
 
@@ -56,12 +56,25 @@ class KillSwitch:
                 .format(KillSwitchStateEnum, type(state))
             )
 
+        if not isinstance(permanent, bool):
+            raise TypeError(
+                "Wrong type for 'permanent' argument. Expected {} but got {}"
+                .format(bool, type(state))
+            )
+
         self.__state = None
-        self.__permanent = permanent
+        self.__permanent = None
 
         if state is KillSwitchStateEnum.ON:
             self.on(permanent)
         else:
+            if permanent:
+                raise KillSwitchException(
+                    "Invalid value for 'permanent' arg. "
+                    "When 'state' then 'permanent' modifier must also be off."
+                )
+
+            self.__permanent = False
             self.off()
 
     def __str__(self):
