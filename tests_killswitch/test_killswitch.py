@@ -1,7 +1,14 @@
 import pytest
 from proton.vpn.killswitch.interface import KillSwitch
 from proton.vpn.killswitch.interface.enums import KillSwitchStateEnum
+from proton.vpn.killswitch.interface.exceptions import MissingKillSwitchBackendDetails
 from proton.vpn.connection import states
+from unittest.mock import patch
+from enum import IntEnum
+
+
+class RandomEnum(IntEnum):
+    RANDOM = 1
 
 
 class DummyKillSwitch(KillSwitch):
@@ -16,38 +23,42 @@ class DummyKillSwitch(KillSwitch):
         self.should_ks_be_active = True
 
 
-class DummyLoader:
-    @staticmethod
-    def get(backend_name, class_name=None):
-        return DummyKillSwitch
+class NotImplementedEnable(KillSwitch):
+    def _disable(self, **kwargs):
+        pass
+
+
+class NotImplementedDisable(KillSwitch):
+    def _enable(self, **kwargs):
+        pass
 
 
 @pytest.fixture
 def modified_loader():
-    from proton import loader
-    orig_loader = loader.Loader
-    loader.Loader = DummyLoader
-    yield loader.Loader
-    loader.Loader = orig_loader
+    with patch("proton.loader.Loader") as dummy_loader:
+        dummy_loader.get.return_value = DummyKillSwitch
+        yield dummy_loader
+
+
+def test_not_implemented_enable(modified_loader):
+    with pytest.raises(NotImplementedError):
+        NotImplementedEnable(KillSwitchStateEnum.ON, True)
+
+
+def test_not_implemented_disable(modified_loader):
+    with pytest.raises(NotImplementedError):
+        NotImplementedDisable()
 
 
 def test_default_init(modified_loader):
     ks = KillSwitch.get_from_factory()()
     assert ks.state == KillSwitchStateEnum.OFF
-    assert ks.permanent_mode is False
+    assert not ks.permanent_mode
 
 
-@pytest.mark.parametrize(
-    "state, permanent",
-    [
-        (True, KillSwitchStateEnum.OFF), ([], {}),
-        ("one", 20), (10, 0), (False, False),
-        (0, 0), (None, None),
-    ]
-)
-def test_init_with_unexpected_args(modified_loader, state, permanent):
+def test_get_from_factory_raises_exception_when_called_with_invalid_state(modified_loader):
     with pytest.raises(TypeError):
-        KillSwitch.get_from_factory()(state, permanent)
+        KillSwitch.get_from_factory()(RandomEnum.RANDOM, None)
 
 
 @pytest.mark.parametrize(
@@ -78,7 +89,7 @@ def test_expected_connection_status_updates_on_disconnected(
     modified_loader, state, permanent,
     connection_status, initial_is_ks_active, is_ks_active
 ):
-    ks = KillSwitch.get_from_factory()(state, permanent)
+    ks = DummyKillSwitch(state, permanent)
     assert ks.state == state
     assert ks.permanent_mode == permanent
     assert ks.should_ks_be_active == initial_is_ks_active
@@ -101,7 +112,7 @@ def test_expected_connection_status_updates_on_connecting(
     modified_loader, state, permanent,
     connection_status, initial_is_ks_active, is_ks_active
 ):
-    ks = KillSwitch.get_from_factory()(state, permanent)
+    ks = DummyKillSwitch(state, permanent)
     assert ks.state == state
     assert ks.permanent_mode == permanent
     assert ks.should_ks_be_active == initial_is_ks_active
@@ -124,7 +135,7 @@ def test_expected_connection_status_updates_on_connected(
     modified_loader, state, permanent,
     connection_status, initial_is_ks_active, is_ks_active
 ):
-    ks = KillSwitch.get_from_factory()(state, permanent)
+    ks = DummyKillSwitch(state, permanent)
     assert ks.state == state
     assert ks.permanent_mode == permanent
     assert ks.should_ks_be_active == initial_is_ks_active
@@ -142,7 +153,7 @@ def test_expected_connection_status_updates_on_connected(
     ]
 )
 def test_permanet_mode_enable(modified_loader, state, permanent, initial_is_ks_active, is_ks_active):
-    ks = KillSwitch.get_from_factory()(state, permanent)
+    ks = DummyKillSwitch(state, permanent)
     assert ks.state == state
     assert ks.permanent_mode == permanent
     assert ks.should_ks_be_active == initial_is_ks_active
@@ -160,7 +171,7 @@ def test_permanet_mode_enable(modified_loader, state, permanent, initial_is_ks_a
     ]
 )
 def test_permanet_mode_disable(modified_loader, state, permanent, initial_is_ks_active, is_ks_active):
-    ks = KillSwitch.get_from_factory()(state, permanent)
+    ks = DummyKillSwitch(state, permanent)
     assert ks.state == state
     assert ks.permanent_mode == permanent
     assert ks.should_ks_be_active == initial_is_ks_active
@@ -168,3 +179,16 @@ def test_permanet_mode_disable(modified_loader, state, permanent, initial_is_ks_
     assert ks.state == state
     assert ks.permanent_mode == (not permanent)
     assert ks.should_ks_be_active == is_ks_active
+
+
+def test_get_priority(modified_loader):
+    assert DummyKillSwitch._get_priority() is None
+
+
+def test_get_validate(modified_loader):
+    assert not DummyKillSwitch._validate()
+
+
+def test_attempt_to_get_non_existing_backend():
+    with pytest.raises(MissingKillSwitchBackendDetails):
+        KillSwitch.get_from_factory("dummy-backend")
