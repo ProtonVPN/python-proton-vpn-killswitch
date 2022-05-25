@@ -14,7 +14,7 @@ setup(
     python_requires=">=3.8",
     install_requires=["proton-core", "proton-vpn-connection"],
     extras_require={
-        "test": ["pytest"]
+        "test": ["pytest", "pytest-cov"]
     },
     license="GPLv3",
     platforms="OS Independent",

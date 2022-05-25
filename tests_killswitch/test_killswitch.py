@@ -13,14 +13,14 @@ class RandomEnum(IntEnum):
 
 class DummyKillSwitch(KillSwitch):
     def __init__(self, *args, **kwargs):
-        self.should_ks_be_active = None
+        self.should_ks_be_enabled = None
         super().__init__(*args, **kwargs)
 
     def _disable(self, **kwargs):
-        self.should_ks_be_active = False
+        self.should_ks_be_enabled = False
 
     def _enable(self, **kwargs):
-        self.should_ks_be_active = True
+        self.should_ks_be_enabled = True
 
 
 class NotImplementedEnable(KillSwitch):
@@ -62,22 +62,23 @@ def test_get_from_factory_raises_exception_when_called_with_invalid_state(modifi
 
 
 @pytest.mark.parametrize(
-    "state, permanent",
+    "state, permanent, should_ks_be_enabled",
     [
-        (KillSwitchStateEnum.ON, False),
-        (KillSwitchStateEnum.ON, True),
-        (KillSwitchStateEnum.OFF, False),
-        (KillSwitchStateEnum.OFF, True),
+        (KillSwitchStateEnum.ON, False, None),
+        (KillSwitchStateEnum.ON, True,  True),
+        (KillSwitchStateEnum.OFF, False, False),
+        (KillSwitchStateEnum.OFF, True, False),
     ]
 )
-def test_init_with_expected_args(modified_loader, state, permanent):
+def test_init_with_expected_args(modified_loader, state, permanent, should_ks_be_enabled):
     ks = KillSwitch.get_from_factory()(state, permanent)
     assert ks.state == state
     assert ks.permanent_mode == permanent
+    assert ks.should_ks_be_enabled == should_ks_be_enabled
 
 
 @pytest.mark.parametrize(
-    "state, permanent, connection_status, initial_is_ks_active, is_ks_active",
+    "state, permanent, connection_status, initial_should_ks_be_enabled, should_ks_be_enabled",
     [
         (KillSwitchStateEnum.OFF, False, states.Disconnected(), False, False),
         (KillSwitchStateEnum.OFF, True, states.Disconnected(), False, False),
@@ -87,20 +88,16 @@ def test_init_with_expected_args(modified_loader, state, permanent):
 )
 def test_expected_connection_status_updates_on_disconnected(
     modified_loader, state, permanent,
-    connection_status, initial_is_ks_active, is_ks_active
+    connection_status, initial_should_ks_be_enabled, should_ks_be_enabled
 ):
-    ks = DummyKillSwitch(state, permanent)
-    assert ks.state == state
-    assert ks.permanent_mode == permanent
-    assert ks.should_ks_be_active == initial_is_ks_active
-    ks.connection_status_update(connection_status)
-    assert ks.state == state
-    assert ks.permanent_mode == permanent
-    assert ks.should_ks_be_active == is_ks_active
+    _test_on_connection_status_update(
+        state, permanent, connection_status,
+        initial_should_ks_be_enabled, should_ks_be_enabled
+    )
 
 
 @pytest.mark.parametrize(
-    "state, permanent, connection_status, initial_is_ks_active, is_ks_active",
+    "state, permanent, connection_status, initial_should_ks_be_enabled, should_ks_be_enabled",
     [
         (KillSwitchStateEnum.OFF, False, states.Connecting(), False, False),
         (KillSwitchStateEnum.OFF, True, states.Connecting(), False, False),
@@ -110,20 +107,16 @@ def test_expected_connection_status_updates_on_disconnected(
 )
 def test_expected_connection_status_updates_on_connecting(
     modified_loader, state, permanent,
-    connection_status, initial_is_ks_active, is_ks_active
+    connection_status, initial_should_ks_be_enabled, should_ks_be_enabled
 ):
-    ks = DummyKillSwitch(state, permanent)
-    assert ks.state == state
-    assert ks.permanent_mode == permanent
-    assert ks.should_ks_be_active == initial_is_ks_active
-    ks.connection_status_update(connection_status)
-    assert ks.state == state
-    assert ks.permanent_mode == permanent
-    assert ks.should_ks_be_active == is_ks_active
+    _test_on_connection_status_update(
+        state, permanent, connection_status,
+        initial_should_ks_be_enabled, should_ks_be_enabled
+    )
 
 
 @pytest.mark.parametrize(
-    "state, permanent, connection_status, initial_is_ks_active, is_ks_active",
+    "state, permanent, connection_status, initial_should_ks_be_enabled, should_ks_be_enabled",
     [
         (KillSwitchStateEnum.OFF, False, states.Connected(), False, False),
         (KillSwitchStateEnum.OFF, True, states.Connected(), False, False),
@@ -133,52 +126,51 @@ def test_expected_connection_status_updates_on_connecting(
 )
 def test_expected_connection_status_updates_on_connected(
     modified_loader, state, permanent,
-    connection_status, initial_is_ks_active, is_ks_active
+    connection_status, initial_should_ks_be_enabled, should_ks_be_enabled
 ):
+    _test_on_connection_status_update(
+        state, permanent, connection_status,
+        initial_should_ks_be_enabled, should_ks_be_enabled
+    )
+
+
+def _test_on_connection_status_update(state, permanent, connection_status, initial_should_ks_be_enabled, should_ks_be_enabled):
     ks = DummyKillSwitch(state, permanent)
-    assert ks.state == state
-    assert ks.permanent_mode == permanent
-    assert ks.should_ks_be_active == initial_is_ks_active
     ks.connection_status_update(connection_status)
     assert ks.state == state
     assert ks.permanent_mode == permanent
-    assert ks.should_ks_be_active == is_ks_active
+    assert ks.should_ks_be_enabled == should_ks_be_enabled
 
 
 @pytest.mark.parametrize(
-    "state, permanent, initial_is_ks_active, is_ks_active",
+    "state, permanent, initial_should_ks_be_enabled, should_ks_be_enabled",
     [
         (KillSwitchStateEnum.OFF, False, False, False),
         (KillSwitchStateEnum.ON, False, None, True),
     ]
 )
-def test_permanet_mode_enable(modified_loader, state, permanent, initial_is_ks_active, is_ks_active):
+def test_permanet_mode_enable(modified_loader, state, permanent, initial_should_ks_be_enabled, should_ks_be_enabled):
     ks = DummyKillSwitch(state, permanent)
-    assert ks.state == state
-    assert ks.permanent_mode == permanent
-    assert ks.should_ks_be_active == initial_is_ks_active
-    ks.permanent_mode_enable()
-    assert ks.state == state
-    assert ks.permanent_mode == (not permanent)
-    assert ks.should_ks_be_active == is_ks_active
+    _test_switch_permanent_mode(ks, ks.permanent_mode_enable, state, permanent, initial_should_ks_be_enabled, should_ks_be_enabled)
 
 
 @pytest.mark.parametrize(
-    "state, permanent, initial_is_ks_active, is_ks_active",
+    "state, permanent, initial_should_ks_be_enabled, should_ks_be_enabled",
     [
         (KillSwitchStateEnum.OFF, True, False, False),
         (KillSwitchStateEnum.ON, True, True, False),
     ]
 )
-def test_permanet_mode_disable(modified_loader, state, permanent, initial_is_ks_active, is_ks_active):
+def test_permanet_mode_disable(modified_loader, state, permanent, initial_should_ks_be_enabled, should_ks_be_enabled):
     ks = DummyKillSwitch(state, permanent)
-    assert ks.state == state
-    assert ks.permanent_mode == permanent
-    assert ks.should_ks_be_active == initial_is_ks_active
-    ks.permanent_mode_disable()
+    _test_switch_permanent_mode(ks, ks.permanent_mode_disable, state, permanent, initial_should_ks_be_enabled, should_ks_be_enabled)
+
+
+def _test_switch_permanent_mode(ks, method, state, permanent, initial_should_ks_be_enabled, should_ks_be_enabled):
+    method()
     assert ks.state == state
     assert ks.permanent_mode == (not permanent)
-    assert ks.should_ks_be_active == is_ks_active
+    assert ks.should_ks_be_enabled == should_ks_be_enabled
 
 
 def test_get_priority(modified_loader):
