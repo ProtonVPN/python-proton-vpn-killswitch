@@ -3,5 +3,5 @@ from enum import IntEnum
 
 class KillSwitchStateEnum(IntEnum):
     OFF = 0
-    ON = 1
-    PERMANENT = 2
+    ON_NON_PERMANENT = 1
+    ON_PERMANENT = 2
