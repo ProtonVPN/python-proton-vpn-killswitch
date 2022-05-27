@@ -1,7 +1,7 @@
 NMKillswitch
 ----------
 
-.. autoclass:: protonvpn.killswitch.NMKillSwitch
+.. autoclass:: proton.vpn.killswitch.KillSwitch
    :members:
    :special-members: __init__
 
@@ -9,7 +9,7 @@ NMKillswitch
 Exceptions
 ###########
 
-.. automodule:: protonvpn.killswitch.exceptions
+.. automodule:: proton.vpn.killswitch.exceptions
    :members:
    :inherited-members:
 

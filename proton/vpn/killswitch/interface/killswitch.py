@@ -62,6 +62,7 @@ class KillSwitch:
         If backend is passed then it will attempt to get that specific
         backend, otherwise it will attempt to get the default backend.
         The definition of default is as follows:
+
          - The backend exists/is installed
          - The backend passes the `_validate()`
          - The backend with the highest `_get_priority()` value
