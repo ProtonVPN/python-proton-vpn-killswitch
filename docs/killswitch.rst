@@ -1,5 +1,5 @@
 NMKillswitch
-----------
+------------
 
 .. autoclass:: proton.vpn.killswitch.interface.KillSwitch
    :members:
