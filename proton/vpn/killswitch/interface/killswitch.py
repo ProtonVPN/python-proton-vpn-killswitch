@@ -15,8 +15,8 @@ class KillSwitch:
 
     Given also how the kill switch is dependent on connection states,
     it is thus crucial to be able to receive them so that the kill switch can act upon these states.
-    For that reason, the methods that `raise NotImplementedError`
-    have to implement their own logic on how to act upon these connection status changes.
+    The logic for the most part is sorted, so the methods that have `raise NotImplementedError`
+    have to implemented by the backends that derive from this class.
 
     Usage:
 
@@ -32,14 +32,23 @@ class KillSwitch:
         # To turn off (disable) the kill switch:
         killswitch.turn_off()
 
-        # To turn on the kill switch but enable it only when connected to the VPN:
+        # To turn on the kill switch but enable it **only** when connected to the VPN:
         killswitch.turn_on_non_permanently()
 
-        # To tur on the kill switch and enable it permanently:
-        killswitch.permanent_mode_enable()
+        # To turn on the kill switch and enable it permanently:
+        killswitch.turn_on_permanently()
 
         # To turn off the kill switch again:
         killswitch.turn_off()
+
+        # To get the current state of the kill switch:
+        killswitch_state = killswitch.state
+        print(killswitch_state)
+
+    The kill switch can also act as listener to connection status changes,
+    via `connection_status_update()` method. This will properly trigger a certain behaviour
+    based on the connection status and kill switch state. Since is important because both
+    permanent and non-permanent have different behaviours in different connection states.
     """
     def __init__(self, state: KillSwitchStateEnum = KillSwitchStateEnum.OFF):
         if not any([state is known_state for known_state in [value for _, value in KillSwitchStateEnum.__members__.items()]]):
@@ -63,7 +72,6 @@ class KillSwitch:
         backend, otherwise it will attempt to get the default backend.
         The definition of default is as follows:
 
-         - The backend exists/is installed
          - The backend passes the `_validate()`
          - The backend with the highest `_get_priority()` value
         """
