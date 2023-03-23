@@ -1,6 +1,12 @@
+"""
+This module contains the exceptions to be used by kill swtich backends.
+"""
+
+
 class KillSwitchException(Exception):
-    """Base class for KillSwitch specific exceptions"""
-    def __init__(self, message, additional_context=None):
+    """Base class for KillSwitch specific exceptions."""
+
+    def __init__(self, message: str, additional_context: object = None):  # noqa
         self.message = message
         self.additional_context = additional_context
         super().__init__(self.message)

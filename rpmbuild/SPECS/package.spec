@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-killswitch
-%define version 0.0.1
+%define version 0.1.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -17,9 +17,9 @@ Source0: %{unmangled_name}-%{version}.tar.gz
 BuildArch: noarch
 BuildRoot: %{_tmppath}/%{unmangled_name}-%{version}-%{release}-buildroot
 
-BuildRequires: python3-proton-vpn-connection
+BuildRequires: python3-proton-core
 BuildRequires: python3-setuptools
-Requires: python3-proton-vpn-connection
+Requires: python3-proton-core
 
 %{?python_disable_dependency_generator}
 
@@ -43,5 +43,8 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Mar 23 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.1.0
+- Refactor class
+
 * Wed Jun 1 2022 Proton Technologies AG <opensource@proton.me> 0.0.1
 - First RPM release
