@@ -4,7 +4,7 @@ from setuptools import setup, find_namespace_packages
 
 setup(
     name="proton-vpn-killswitch",
-    version="0.1.0",
+    version="0.1.1",
     description="Proton Technologies VPN Kill Switch for linux",
     author="Proton Technologies",
     author_email="contact@protonmail.com",

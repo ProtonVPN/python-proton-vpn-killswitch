@@ -46,10 +46,12 @@ def test_get_backend_killswitch(mock_loader):
     assert KillSwitch.get() == MOCK_KILLSWITCH_BACKEND
 
 
-def test_get_default_priority_value_for_backend():
-    assert KillSwitch._get_priority() == None
+def test_get_priority_raises_exception_when_not_implemented():
+    with pytest.raises(NotImplementedError):
+        KillSwitch._get_priority() == None
 
 
-def test_default_backend_value():
-    assert KillSwitch._validate() == False
+def test_validate_raises_exception_when_not_implemented():
+    with pytest.raises(NotImplementedError):
+        KillSwitch._validate()
 

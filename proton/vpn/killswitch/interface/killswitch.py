@@ -3,6 +3,7 @@ Module that contains the base class for Kill Switch implementations to extend fr
 """
 
 from __future__ import annotations
+from concurrent.futures import Future
 
 from proton.loader import Loader
 
@@ -52,7 +53,7 @@ class KillSwitch:
         """
         raise NotImplementedError
 
-    def enable_ipv6_leak_protection(self):
+    def enable_ipv6_leak_protection(self) -> Future:
         """
         Enables IPv6 kill switch to prevent leaks.
 
@@ -60,7 +61,7 @@ class KillSwitch:
         """
         raise NotImplementedError
 
-    def disable_ipv6_leak_protection(self):
+    def disable_ipv6_leak_protection(self) -> Future:
         """
         Disables IPv6 kill switch to prevent leaks.
 
@@ -68,10 +69,10 @@ class KillSwitch:
         """
         raise NotImplementedError
 
-    @classmethod
-    def _get_priority(cls) -> int:
-        return None
+    @staticmethod
+    def _get_priority() -> int:
+        raise NotImplementedError
 
-    @classmethod
-    def _validate(cls):
-        return False
+    @staticmethod
+    def _validate():
+        raise NotImplementedError
