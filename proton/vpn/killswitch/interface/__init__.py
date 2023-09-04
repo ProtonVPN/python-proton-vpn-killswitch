@@ -19,6 +19,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from proton.vpn.killswitch.interface.killswitch import KillSwitch
+from proton.vpn.killswitch.interface.killswitch import KillSwitch, KillSwitchState
 
-__all__ = ["KillSwitch"]
+__all__ = ["KillSwitch", "KillSwitchState"]

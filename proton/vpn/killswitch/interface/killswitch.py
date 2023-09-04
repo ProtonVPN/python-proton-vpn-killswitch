@@ -21,11 +21,17 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from __future__ import annotations
+from enum import IntEnum
 from concurrent.futures import Future
 
 from proton.loader import Loader
 
 from proton.vpn.killswitch.interface.exceptions import MissingKillSwitchBackendDetails
+
+
+class KillSwitchState(IntEnum):  # pylint: disable=missing-class-docstring
+    OFF = 0
+    ON = 1
 
 
 class KillSwitch:
