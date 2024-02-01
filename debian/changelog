@@ -1,3 +1,9 @@
+proton-vpn-killswitch (0.3.0) unstable; urgency=medium
+
+  * Make kill switch interface async
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Thu, 01 Feb 2024 12:31:07 +0100
+
 proton-vpn-killswitch (0.2.0) UNRELEASED; urgency=medium
 
   * Add kill switch states

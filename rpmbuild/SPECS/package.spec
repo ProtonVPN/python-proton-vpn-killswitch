@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-killswitch
-%define version 0.2.0
+%define version 0.3.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -21,8 +21,8 @@ BuildRequires: python3-proton-core
 BuildRequires: python3-setuptools
 Requires: python3-proton-core
 
-Conflicts: python3-proton-vpn-connection < 0.11.0
-Conflicts: python3-proton-vpn-killswitch-network-manager < 0.2.0
+Conflicts: python3-proton-vpn-connection < 0.12.0
+Conflicts: python3-proton-vpn-killswitch-network-manager < 0.3.0
 Conflicts: python3-proton-vpn-api-core < 0.19.0
 
 %{?python_disable_dependency_generator}
@@ -47,6 +47,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Feb 01 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.3.0
+- Make kill switch interface async
+
 * Mon Sep 04 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.0
 - Add kill switch states
 

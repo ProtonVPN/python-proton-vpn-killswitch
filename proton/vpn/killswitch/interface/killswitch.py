@@ -19,14 +19,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-
 from __future__ import annotations
+
+from abc import ABC, abstractmethod
 from enum import IntEnum
-from concurrent.futures import Future
+from typing import TYPE_CHECKING, Optional
 
 from proton.loader import Loader
 
 from proton.vpn.killswitch.interface.exceptions import MissingKillSwitchBackendDetails
+
+if TYPE_CHECKING:
+    from proton.vpn.connection import VPNServer
 
 
 class KillSwitchState(IntEnum):  # pylint: disable=missing-class-docstring
@@ -34,7 +38,7 @@ class KillSwitchState(IntEnum):  # pylint: disable=missing-class-docstring
     ON = 1
 
 
-class KillSwitch:
+class KillSwitch(ABC):
     """
     The `KillSwitch` is the base class from which all other kill switch
     backends need to derive from.
@@ -53,50 +57,36 @@ class KillSwitch:
         except RuntimeError as excp:
             raise MissingKillSwitchBackendDetails(excp) from excp
 
-    def enable(self, vpn_server):
+    @abstractmethod
+    async def enable(self, vpn_server: Optional["VPNServer"] = None):
         """
         Enables the kill switch.
-
-        :raises KillSwitchError: If unable to enable the kill switch.
         """
-        raise NotImplementedError
 
-    def disable(self):
+    @abstractmethod
+    async def disable(self):
         """
         Disables the kill switch.
-
-        :raises KillSwitchError: If unable to disable the kill switch.
         """
-        raise NotImplementedError
 
-    def update(self, vpn_server):
-        """
-        Update the kill switch.
-
-        :raises KillSwitchError: If unable to update the kill switch.
-        """
-        raise NotImplementedError
-
-    def enable_ipv6_leak_protection(self) -> Future:
+    @abstractmethod
+    async def enable_ipv6_leak_protection(self):
         """
         Enables IPv6 kill switch to prevent leaks.
-
-        :raises KillSwitchError: If unable to enable the kill switch.
         """
-        raise NotImplementedError
 
-    def disable_ipv6_leak_protection(self) -> Future:
+    @abstractmethod
+    async def disable_ipv6_leak_protection(self):
         """
         Disables IPv6 kill switch to prevent leaks.
-
-        :raises KillSwitchError: If unable to disable the kill switch.
         """
-        raise NotImplementedError
 
     @staticmethod
+    @abstractmethod
     def _get_priority() -> int:
-        raise NotImplementedError
+        pass
 
     @staticmethod
+    @abstractmethod
     def _validate():
-        raise NotImplementedError
+        pass
