@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-killswitch
-%define version 0.3.0
+%define version 0.4.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -47,6 +47,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Feb 08 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.4.0
+- Add permanent kill switch
+
 * Thu Feb 01 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.3.0
 - Make kill switch interface async
 

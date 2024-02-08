@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 class KillSwitchState(IntEnum):  # pylint: disable=missing-class-docstring
     OFF = 0
     ON = 1
+    PERMANENT = 2
 
 
 class KillSwitch(ABC):
@@ -58,7 +59,7 @@ class KillSwitch(ABC):
             raise MissingKillSwitchBackendDetails(excp) from excp
 
     @abstractmethod
-    async def enable(self, vpn_server: Optional["VPNServer"] = None):
+    async def enable(self, vpn_server: Optional["VPNServer"] = None, permanent: bool = False):
         """
         Enables the kill switch.
         """
@@ -70,7 +71,7 @@ class KillSwitch(ABC):
         """
 
     @abstractmethod
-    async def enable_ipv6_leak_protection(self):
+    async def enable_ipv6_leak_protection(self, permanent: bool = False):
         """
         Enables IPv6 kill switch to prevent leaks.
         """
